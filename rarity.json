@@ -1,0 +1,13 @@
+{
+  "data": {
+    "COMMON": ["COMMON", 1, 74.3],
+    "UNCOMMON": ["UNCOMMON", 2, 55],
+    "RARE": ["RARE", 3, 35],
+    "SUPER_RARE": ["SUPER_RARE", 4, 15],
+    "ULTRA_RARE": ["ULTRA_RARE", 5, 10],
+    "LEGENDARY": ["LEGENDARY", 6, 7],
+    "MYTHIC": ["MYTHIC", 7, 3],
+    "WAIFU": ["WAIFU", 9, 0.01],
+    "FRIEND": ["FRIEND", 8, 0.7]
+  }
+}

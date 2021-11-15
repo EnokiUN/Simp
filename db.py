@@ -15,6 +15,11 @@ db = client.get_database("Simp")
 
 users = db.get_collection("users")
 
+characters = "1234567890QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm"
+
+def random_id(length=10):
+  return "".join([choice(characters) for i in range(length)])
+
 
 def closest(num: int, counter: Counter):
   curr = ("COMMON", counter.get("COMMON"))
@@ -58,6 +63,8 @@ class RARITY:
 
 class Card:
   def __init__(self, **kwargs) -> None:
+    self.card_id: int = None
+    self.owner: int = None
     self.vtuber_id: str = None
     self.xp = 0
     self.rarity: Rarity = Rarity("None", -1, -1)
@@ -69,15 +76,17 @@ class Card:
         setattr(self, key, kwargs[key])
 
   def out(self):
-    return { "vtuber_id": self.vtuber_id, "xp": self.xp, "rarity": self.rarity.value }
+    return { "card_id": self.card_id, "owner": self.owner, "vtuber_id": self.vtuber_id, "xp": self.xp, "rarity": self.rarity.value }
 
   @staticmethod
   def from_data(data: dict):
     return Card(**data)
 
   @staticmethod
-  def generate(vtuber_id: str):
+  def generate(vtuber_id: str, owner: int):
     return Card(
+      owner=owner,
+      card_id=f"{owner}{random_id(5)}",
       vtuber_id=vtuber_id,
       xp=0,
       rarity=RARITY.random()
@@ -117,10 +126,13 @@ async def find_vtuber(query: str, _min=0.8):
       out.append(entry)
   return [Entry(**x) for x in out]
 
+
 async def sell_card(user_id: int, card_id: int):
   return users.update_one({ "user_id": user_id }, {
     "$pull": {
       "cards": { "card_id": card_id }
     }
   })
+
+
 
