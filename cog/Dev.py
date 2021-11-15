@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 import os
+import logging
+import sys
+import traceback
 
 
 class Dev(commands.Cog):
@@ -16,7 +19,10 @@ class Dev(commands.Cog):
   async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
       """A global error handler cog."""
 
-      print(error)
+
+      trace = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+
+      logging.error(trace)
 
 
       if isinstance(error, commands.CommandNotFound):
@@ -27,14 +33,17 @@ class Dev(commands.Cog):
           message = "You are missing the required permissions to run this command!"
       elif isinstance(error, commands.UserInputError):
           message = "Something about your input was wrong, please check your input and try again!"
+      elif isinstance(error, commands.DisabledCommand):
+          message = f'{ctx.command} has been disabled.'
       else:
-          message = f"Oh no! Something went wrong while running the command!\n```\n{error}\n```"
+          message = f"```\n{trace}\n```"
 
       await ctx.send(embed=discord.Embed(
         title=f"**{error.__class__.__name__}**",
         description=message,
         color=self.bot.color
       ))
+
 
   @commands.group()
   async def cog(self, ctx: commands.Context):

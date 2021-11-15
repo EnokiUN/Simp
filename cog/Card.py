@@ -1,145 +1,141 @@
 import discord
 from discord.ext import commands
+from discord.ext.commands import context
 
-from database import get_randoms
-from db import Card, add_card, find_vtuber, get_user, sell_card
-from src.holodex import Entry
+from hdb import Card, User, RarityData, Rarity, VtuberEntry
 
-from util import CommandWithCooldown, owner_ids
-
-class _Card(commands.Cog, name="Card"):
+class CardGame(commands.Cog):
   def __init__(self, bot):
     self.bot: commands.Bot = bot
+    self.PAGE_SIZE = 10
 
-  @commands.group()
-  async def card(self, ctx):
-    pass
-
-  @card.command(
-    name="generate",
-    hidden=True
-  )
-  async def generate(self, ctx: commands.Context, target: discord.User, vtuber_id: str, rarity: int):
-    if ctx.author.id not in owner_ids:
-      await ctx.send("You Don't Have permission to use this command")
-      return
-    else:
-      targ = await get_user(target.id)
-      new_card = Card(
-        vtuber_id=vtuber_id,
-        rarity=rarity,
-        xp=0
-      )
-      await add_card(target.id, new_card)
-
-      vtuber = Card.get_vtuber(vtuber_id=vtuber_id)
-
-      embed = discord.Embed(
-        title=f"Vtuber Found: **{vtuber.name}**",
-        description=self.generate_description(new_card, vtuber),
-        color=self.bot.color
-      )
-
-      if vtuber.photo is not None:
-        embed.set_image(url=vtuber.photo)
-
-      await ctx.send(
-        embed=embed
-      )
-
-
-
-
-  def generate_description(self, card: Card, vtuber: Entry):
-    return "".join([
-      f"Name: {vtuber.name}\n",
-      f"Organization: {vtuber.org}\n",
-      f"Video Count: {vtuber.video_count}\n",
-      f"Clip Count: {vtuber.clip_count}\n",
-      f"Rarity: {card.rarity[0].lower()}"
-    ])
-
-  @card.command(
-    name="collect", cls=CommandWithCooldown
-  )
-  @commands.cooldown(1, 60.0)
-  async def collect(self, ctx: commands.Context):
-    user = await get_user(ctx.author.id)
-    vtuber = get_randoms(1)[0]
-
-    new_card = Card.generate(vtuber.id)
-
-    await add_card(ctx.author.id, new_card)
-
+  async def create_embed(self, title: str, card: Card):
+    vtuber = card.vtuber.copy()
     embed = discord.Embed(
-      title=f"Vtuber Found: **{vtuber.name}**",
-      description=self.generate_description(new_card, vtuber),
+      title=title.format(name=vtuber.name, en_name=vtuber.english_name),
+      description=("".join([
+        f"Name: {vtuber.name}\n",
+        f"Organization: {vtuber.org}\n"
+        f"Rarity: {card.rarity_data.name.lower()}\n",
+        f"Sub Count: {vtuber.sub_count}\n",
+        f"Card ID: {card.card_id}\n",
+        f"Cost: {round(card.cost, 2)}"
+      ])),
       color=self.bot.color
     )
 
     if vtuber.photo is not None:
       embed.set_image(url=vtuber.photo)
 
+    return embed
+
+
+  @commands.group(
+    name="card"
+  )
+  async def card(self, ctx: commands.Context):
+    pass
+
+  @card.command()
+  async def collect(self, ctx: commands.Context):
+    user = User(ctx.author.id)
+    new_card = Card.create(ctx.author.id, VtuberEntry.random().id, RarityData.random().value)
+    card = Card(new_card)
+
+    embed = await self.create_embed(
+      title="Vtuber Found: {name}",
+      card=card
+    )
+
     await ctx.send(
       embed=embed
     )
 
-  async def get_page(self, cards: list, page: int = 0) -> list:
-    out = []
-    _max = min(10, len(cards))
-    _cur = page * 10
-    for i in range(_cur, min(_cur + _max, len(cards))):
-      out.append((i, cards[i]))
-    return out
-
-  @card.command(name="list")
-  async def _list(self, ctx: commands.Context, page: int = 0):
-    user = await get_user(ctx.author.id)
-    cards = await self.get_page(user['cards'], page)
+  @card.command()
+  async def inv(self, ctx: commands.Context, page=0):
+    user = User(ctx.author.id)
+    _max = min(len(user.cards), self.PAGE_SIZE)
+    cards: list[Card] = []
+    for i in range(page * _max, page * _max + _max):
+      cards.append(Card.from_card_id(user.cards[i]))
 
     desc = ""
-    for idx, _card in cards:
-      card = Card.from_data(_card)
-      vtuber = Card.get_vtuber(card.vtuber_id)
-      desc += f"`{idx}`|[{card.rarity[0].lower()}] {vtuber.name} (org: {vtuber.org})\n"
+
+    for idx, (card) in enumerate(cards):
+      vtuber = card.vtuber.copy()
+      desc += f"`{card.card_id}`|: [{card.rarity_data.name.lower()}] **{vtuber.name}**({vtuber.english_name})\n"
+
+
+    embed = discord.Embed(
+      title=f"Inv Page: {page}",
+      description=desc,
+      color=self.bot.color
+    )
 
     await ctx.send(
-      embed= discord.Embed(
-        title="Card List",
-        description=desc,
-        color=self.bot.color
-      )
+      embed=embed
     )
 
   @card.command()
-  async def _find(self, ctx: commands.Context, _min=0.8, *, query: str):
-    out = find_vtuber(query, _min=_min)
-    desc = ''
-    for i in range(min(len(out), 10)):
-      desc += f"`{i}`| {out[i].name} : {out[i].vtuber_id}"
-
-    await ctx.send(
-      embed=discord.Embed(
-        title="results",
-        description=desc,
-        color=self.bot.color
+  async def view(self, ctx: commands.Context, card_id: int):
+    user = User(ctx.author.id)
+    card = user.get_card(card_id)
+    if card.owner != ctx.author.id:
+      await ctx.send(content="You dont own this card")
+    else:
+      embed = await self.create_embed(
+        title="Vtuber Card: {name}",
+        card=card
       )
-    )
+
+      await ctx.send(
+        embed=embed
+      )
 
   @card.command()
   async def sell(self, ctx: commands.Context, card_id: int):
-    user = await get_user(ctx.author.id)
-    cards = user['cards']
+    user = User(ctx.author.id)
+    if len(user.cards) == 0:
+      await ctx.send("You dont have any cards")
+    else:
+      res = user.sell_card(card_id)
+      if res == 0:
+        await ctx.send("You Don't own this card")
+      elif res == 1:
+        await ctx.send("Card With ID doesn't exist")
+      else:
+        vtuber = res.vtuber.copy()
 
-    if card_id > len(cards):
-      await ctx.send("Card Index out of range")
-      return
+        embed = discord.Embed(
+          title="Card Sold",
+          description=("".join([
+            f"Name: {vtuber.name}\n",
+            f"Organization: {vtuber.org}\n"
+            f"Rarity: {res.rarity_data.name.lower()}\n",
+            f"Sub Count: {vtuber.sub_count}\n",
+            f"Card ID: {card_id}",
+            f"\n\nGained {round(float(res.cost), 2)} vcoins"
+          ])),
+          color=self.bot.color
+        )
+        await ctx.send(embed=embed)
 
+  @card.command(
+    name="balance",
+    aliases=["bal"]
+  )
+  async def bal(self, ctx: commands.Context):
+    user = User(ctx.author.id)
 
-    res = await sell_card(ctx.author.id, cards[card_id])
-    await ctx.send("done")
-
+    await ctx.send(
+      reference=ctx.message,
+      embed=discord.Embed(
+        title="Balance",
+        description=f"Your Balance is {round(user.bal, 2)} vcoins",
+        color=self.bot.color
+      )
+    )
 
 
 def setup(bot):
-  bot.add_cog(_Card(bot))
+  bot.add_cog(CardGame(bot))
