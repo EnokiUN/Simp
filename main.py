@@ -3,6 +3,10 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import os
 import logging
+from app import keep_alive
+import asyncio
+import random
+
 
 logging.basicConfig(
   filename="logs.log",
@@ -12,6 +16,9 @@ logging.basicConfig(
 )
 
 load_dotenv()
+
+
+keep_alive(with_join=False)
 
 
 token = os.getenv("TOKEN")
