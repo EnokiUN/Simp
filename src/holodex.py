@@ -34,6 +34,8 @@ class Channel:
     self.created_at: str = None
     self.top_topics: list[str] = []
 
+
+
     for key in data.keys():
       setattr(self, key, data[key])
 
