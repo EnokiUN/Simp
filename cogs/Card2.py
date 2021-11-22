@@ -1,6 +1,9 @@
+from random import randint
 import discord
 from discord.ext import commands
 from discord_components import Button, ButtonStyle, Interaction
+
+from classes.Time import Time
 
 import hdb3
 
@@ -29,7 +32,42 @@ class Card(commands.Cog):
         )
 
 
+  @commands.command(
+    name="daily"
+  )
+  @commands.cooldown(1, per=24.0*3600.0)
+  async def daily(self, ctx: commands.Context):
+    await hdb3.init_user(ctx.author.id)
+    amount = randint(500, 1500)
+    await hdb3.inc_bal(ctx.author.id, amount)
+    user = await hdb3.get_user(ctx.author.id)
+    await ctx.send(
+      embed=discord.Embed(
+        title=f"You Have Dailied and gained: {amount}",
+        description=f"New Balance: `{user['bal']}` vyen",
+        color=self.bot.color
+      )
+    )
+
   @commands.command()
+  @commands.cooldown(1, per=15.0)
+  async def work(self, ctx: commands.Context):
+    await hdb3.init_user(ctx.author.id)
+    amount = randint(50, 150)
+    await hdb3.inc_bal(ctx.author.id, amount)
+    user = await hdb3.get_user(ctx.author.id)
+    await ctx.send(
+      embed=discord.Embed(
+        title=f"You Have Worked and gained: {amount}",
+        description=f"New Balance: `{user['bal']}` vyen",
+        color=self.bot.color
+      )
+    )
+
+
+  @commands.command(
+    name="collect"
+  )
   async def collect(self, ctx: commands.Context):
     await hdb3.init_user(ctx.author.id)
     vtuber, rarity, card = await hdb3.create_card(ctx.author.id)

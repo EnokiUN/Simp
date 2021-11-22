@@ -121,7 +121,10 @@ async def get_card(card_id: str):
   return cards3.find_one({"card_id": card_id})
 
 async def get_user(user_id):
-  return users3.find_one({"user_id": user_id})
+  res = users3.find_one({"user_id": user_id})
+  if not res:
+    res = await create_user(user_id)
+  return res
 
 async def init_user(user_id: str):
   res = await get_user(user_id)
@@ -133,13 +136,26 @@ async def create_user(user_id):
     "user_id": user_id,
     "effects": [],
     "inv": [],
-    "bal": 0
+    "bal": 0,
+    "cooldowns": {}
   })
 
+async def fix_user(user_id):
+  res = users3.find_one({"user_id":user_id})
+  out = {"user_id":user_id}
+  if not res['cooldowns']:
+    out['cooldowns'] = {}
+  if not res['bal']:
+    out['bal'] = 0
+  if not res['inv']:
+    out['inv'] = []
+  if not res['effects']:
+    out['effects'] = []
+  res = users3.update_one({"user_id":user_id}, { "$set": out })
+  return res
+
 async def inc_bal(user_id: int, amount: int):
-  return users3.update_one({"user_id": user_id}, {
-    "$inc": {"bal": amount}
-  })
+  return users3.update_one({"user_id": user_id}, {"$inc": {"bal": amount} }).raw_result
 
 async def get_user_cards(user_id):
   return [doc for doc in cards3.find({"owner":user_id})]
