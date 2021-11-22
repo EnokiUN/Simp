@@ -1,11 +1,13 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import os
 import logging
-from app import keep_alive
+# from app import keep_alive
 import asyncio
 import random
+
+from classes.Bot import Bot
 
 
 logging.basicConfig(
@@ -18,23 +20,12 @@ logging.basicConfig(
 load_dotenv()
 
 
-keep_alive(with_join=False)
+# keep_alive(with_join=False)
 
 
 token = os.getenv("TOKEN")
 
 prefix = commands.when_mentioned_or(".")
-
-
-class Bot(commands.Bot):
-  def __init__(self, command_prefix, help_command=commands.help.DefaultHelpCommand(), description=None, **options):
-    super().__init__(command_prefix, help_command=help_command, description=description, **options)
-
-    self.friends_ids = { 395899902867275787 }
-    self.color = discord.Color.from_rgb(100, 170, 230)
-
-
-
 
 bot = Bot(
   command_prefix=".",
@@ -45,13 +36,18 @@ bot = Bot(
 async def on_ready():
   print(f"{bot.user} has logged in!")
 
-cogs = [f"cogs.{filename[:-3]}" for filename in os.listdir("./cogs/") if filename.endswith(".py")]
+def run():
+  cogs = [f"cogs.{filename[:-3]}" for filename in os.listdir("./cogs/") if filename.endswith(".py")]
 
-for cog in cogs:
-  try:
-    print(f'registering cog: {cog}')
-    bot.load_extension(cog)
-  except Exception as err:
-    print(err)
+  for cog in cogs:
+    try:
+      print(f'registering cog: {cog}')
+      bot.load_extension(cog)
+    except Exception as err:
+      print(err)
 
-bot.run(token)
+  bot.run(token)
+
+
+if __name__ == "__main__":
+  run()
