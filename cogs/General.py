@@ -14,7 +14,7 @@ class General(commands.Cog):
     await ctx.send(
       embed=discord.Embed(
         title="Latency",
-        description=f"My Ping is: {round(self.bot.latency * 100, 2)}ms"
+        description=f"My Ping is: {round(self.bot.latency * 1000, 2)}ms"
       )
     )
 
