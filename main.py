@@ -29,6 +29,7 @@ prefix = commands.when_mentioned_or(".")
 
 bot = Bot(
   command_prefix=".",
+  case_insensitive=True,
   owner_ids={ 635959963134459904 }
 )
 
