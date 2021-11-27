@@ -1,36 +1,41 @@
 from random import randint
 import discord
 from discord.ext import commands
-from discord_components import Button, ButtonStyle, Interaction
 
 from classes.Time import Time
 
 import hdb3
 
+class SellButton(discord.ui.Button):
+  def __init__(self, card, cost):
+    self.card = card
+    self.cost = cost
+    super().__init__(
+      label="Sell",
+      style=discord.ButtonStyle.success,
+      # emoji=""
+    )
+
+  async def callback(self, interaction):
+    if card['owner'] != interaction.user.id:
+      return await interaction.response.send_message("OI, you don't own this card!")
+    res = await hdb3.inc_bal(interaction.user.id, cost)
+    await hdb3.remove_card(card['id'])
+    await interation.response.send_message(
+      embed=discord.Embed(
+        title="Balance",
+        description=f"Sold Card For: {cost}\n New Balance: {res['bal']}",
+        color=self.bot.color
+      )
+    )
+    self.label = "Sold!"
+    self.style = discord.ButtonStyle.danger
+    self.disabled = True
+    await interaction.message.edit(view=self.view)
+
 class Card(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
-
-  @commands.Cog.listener("on_button_click")
-  async def on_button_click(self, interaction: Interaction):
-    if interaction.custom_id.startswith("dc"):
-      card_id = int(interaction.custom_id.split(" ")[1])
-      card = await hdb3.get_card(card_id)
-      if card['owner'] != interaction.author.id:
-        await interaction.respond(
-          content="You Dont own this card"
-        )
-      else:
-        cost, card, vtuber = await hdb3.get_card_cost(card_id)
-        res = await hdb3.inc_bal(interaction.author.id, cost)
-        await interaction.respond(
-          embed = discord.Embed(
-            title="Balance",
-            description=f"Sold Card For: {cost}\n New Balance: {res['bal']}",
-            color=self.bot.color
-          )
-        )
-
 
   @commands.command(
     name="daily"
@@ -85,13 +90,7 @@ class Card(commands.Cog):
 
     await ctx.send(
       embed=embed,
-      components=[
-        Button(
-          label="Sell",
-          style=ButtonStyle.green,
-          custom_id=f"dc {card['card_id']}"
-        )
-      ]
+      view=discord.ui.View(SellButton(card, cost))
     )
 
   @commands.command(
