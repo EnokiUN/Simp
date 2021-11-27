@@ -12,13 +12,13 @@ class SellButton(discord.ui.Button):
     self.cost = cost
     super().__init__(
       label="Sell",
-      style=discord.ButtonStyle.success
-      # emoji=""
+      style=discord.ButtonStyle.success,
+      emoji="<a:guramoni:914062627402027048>"
     )
 
   async def callback(self, interaction):
     if card['owner'] != interaction.user.id:
-      return await interaction.response.send_message("OI, you don't own this card!")
+      return await interaction.response.send_message("OI, you don't own this card! <:oiina:914061383602171924>")
     res = await hdb3.inc_bal(interaction.user.id, cost)
     await hdb3.remove_card(card['card_id'])
     await interation.response.send_message(
