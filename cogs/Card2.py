@@ -12,7 +12,7 @@ class SellButton(discord.ui.Button):
     self.cost = cost
     super().__init__(
       label="Sell",
-      style=discord.ButtonStyle.success,
+      style=discord.ButtonStyle.success
       # emoji=""
     )
 
