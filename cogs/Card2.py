@@ -20,7 +20,7 @@ class SellButton(discord.ui.Button):
     if card['owner'] != interaction.user.id:
       return await interaction.response.send_message("OI, you don't own this card!")
     res = await hdb3.inc_bal(interaction.user.id, cost)
-    await hdb3.remove_card(card['id'])
+    await hdb3.remove_card(card['card_id'])
     await interation.response.send_message(
       embed=discord.Embed(
         title="Balance",
